@@ -4,21 +4,39 @@ import android.app.*
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.Chronometer
+import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 
 
-class ServiceWorker: Service(){
+class ServiceWorker : Service() {
 
-    companion object{
-        const val NOTIFICATION_ID = 1
-        const val CHANNEL_ID = "CHANNEL_ID_1"
-        const val ACTION_CLOSE = "SERVICE_ACTION_CLOSE"
+    companion object {
+        const val ACTION_START_SERVICE = "ACTION_START_SERVICE"
+        const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
+
+        private const val TAG = "ServiceWorker"
+        private const val NOTIFICATION_ID = 1
+        private const val CHANNEL_ID = "CHANNEL_ID_1"
+        private const val ACTION_START = "ACTION_START"
+        private const val ACTION_PAUSE = "ACTION_PAUSE"
+        private const val ACTION_STOP = "ACTION_STOP"
     }
+
+    lateinit var timer: Chronometer
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val layout: View = inflater.inflate(R.layout.notification_custom, null)
+        timer = layout.findViewById(R.id.chronometer)
     }
 
     private fun createNotificationChannel() {
@@ -35,40 +53,102 @@ class ServiceWorker: Service(){
         }
     }
 
-    private fun createNotification(): Notification {
-        val deleteIntent = Intent(this, ServiceWorker::class.java)
-        deleteIntent.action = ACTION_CLOSE
-        val deletePendingIntent = PendingIntent.getService(this, 0, deleteIntent, 0)
-
+    private fun createNotification(remoteViews: RemoteViews): Notification {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-
         builder
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.service_title))
-            .setContentText("Текст уведомления")
             .setOnlyAlertOnce(true)
-            .addAction(0, "STOP SERVICE", deletePendingIntent)
-
+            .setContent(remoteViews)
         return builder.build()
     }
 
+    private fun getRemoteViews(): RemoteViews {
+        val deleteIntent = Intent(this, ServiceWorker::class.java)
+        deleteIntent.action = ACTION_STOP_SERVICE
+        val deletePendingIntent = PendingIntent.getService(this, 0, deleteIntent, 0)
+
+        val startIntent = Intent(this, ServiceWorker::class.java)
+        startIntent.action = ACTION_START
+        val startPendingIntent = PendingIntent.getService(this, 0, startIntent, 0)
+
+        val pauseIntent = Intent(this, ServiceWorker::class.java)
+        pauseIntent.action = ACTION_PAUSE
+        val pausePendingIntent = PendingIntent.getService(this, 0, pauseIntent, 0)
+
+        val stopIntent = Intent(this, ServiceWorker::class.java)
+        stopIntent.action = ACTION_STOP
+        val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0)
+
+        val remoteViews = RemoteViews(packageName, R.layout.notification_custom)
+        remoteViews.setTextViewText(R.id.tv_charge, "90%")
+        remoteViews.setOnClickPendingIntent(R.id.btn_stop_service, deletePendingIntent)
+        remoteViews.setOnClickPendingIntent(R.id.btn_start, startPendingIntent)
+        remoteViews.setOnClickPendingIntent(R.id.btn_pause, pausePendingIntent)
+        remoteViews.setOnClickPendingIntent(R.id.btn_stop, stopPendingIntent)
+
+        return remoteViews
+    }
+
+    fun stopTimer(remoteViews: RemoteViews): RemoteViews {
+        remoteViews.setChronometer(R.id.chronometer, SystemClock.elapsedRealtime(), null, false)
+        return remoteViews
+    }
+
+    fun startTimer(remoteViews: RemoteViews): RemoteViews {
+        remoteViews.setChronometer(R.id.chronometer, SystemClock.elapsedRealtime(), null, true)
+        return remoteViews
+    }
+
+    fun pauseTimer(remoteViews: RemoteViews): RemoteViews {
+        remoteViews.setChronometer(
+            R.id.chronometer, timer.base,
+            null, false
+        )
+
+        return remoteViews
+    }
+
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        when (intent.action){
-            ACTION_CLOSE -> stopSelf()
-            else -> {
-                startForeground(NOTIFICATION_ID, createNotification())
-                Toast.makeText(this, "Сервис запущен", Toast.LENGTH_SHORT).show()
+        when (intent.action) {
+            ACTION_START -> {
+                Toast.makeText(this, "START", Toast.LENGTH_SHORT).show()
+                updateNotification(createNotification(startTimer(getRemoteViews())))
+
             }
+            ACTION_PAUSE -> {
+                Toast.makeText(this, "PAUSE", Toast.LENGTH_SHORT).show()
+                updateNotification(createNotification(pauseTimer(getRemoteViews())))
+            }
+
+            ACTION_STOP -> {
+                Toast.makeText(this, "STOP", Toast.LENGTH_SHORT).show()
+                updateNotification(createNotification(stopTimer(getRemoteViews())))
+            }
+            ACTION_START_SERVICE -> startForeground(
+                NOTIFICATION_ID, createNotification(
+                    stopTimer(
+                        getRemoteViews()
+                    )
+                )
+            )
+            ACTION_STOP_SERVICE -> stopSelf()
         }
         return START_NOT_STICKY
     }
 
+    private fun updateNotification(notification: Notification) {
+        val notificationManager = NotificationManagerCompat.from(this)
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        Toast.makeText(this, "Сервис остановлен", Toast.LENGTH_SHORT).show()
+        Log.d(TAG, "onDestroy() called");
+
+
     }
 
     override fun onBind(p0: Intent?): IBinder? {
-       return null
+        return null
     }
 }

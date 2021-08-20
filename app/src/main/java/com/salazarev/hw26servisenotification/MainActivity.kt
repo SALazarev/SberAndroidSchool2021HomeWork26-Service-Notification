@@ -13,6 +13,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startService() {
         val intent = Intent(this, ServiceWorker::class.java)
+        intent.action = ServiceWorker.ACTION_START_SERVICE
         startService(intent)
     }
 }
