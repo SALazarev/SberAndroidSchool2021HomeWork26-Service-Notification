@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">HomeWork26ServiseNotification</string>
+    <string name="service_title">Титул сервиса</string>
 </resources>
