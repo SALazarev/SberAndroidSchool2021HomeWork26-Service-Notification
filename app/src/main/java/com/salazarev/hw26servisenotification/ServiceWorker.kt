@@ -81,21 +81,20 @@ class ServiceWorker : Service() {
         return remoteViews
     }
 
-    fun stopTimer(remoteViews: RemoteViews): RemoteViews {
+    private fun stopTimer(remoteViews: RemoteViews): RemoteViews {
         diff = 0L
         remoteViews.setChronometer(R.id.chronometer, SystemClock.elapsedRealtime(), null, false)
         return remoteViews
     }
 
-    var start = 0L
-    fun startTimer(remoteViews: RemoteViews): RemoteViews {
+    private fun startTimer(remoteViews: RemoteViews): RemoteViews {
         start = SystemClock.elapsedRealtime() - diff
         remoteViews.setChronometer(R.id.chronometer, start, null, true)
         return remoteViews
     }
 
-    var pause = 0L
-    fun pauseTimer(remoteViews: RemoteViews): RemoteViews {
+
+    private fun pauseTimer(remoteViews: RemoteViews): RemoteViews {
         pause = SystemClock.elapsedRealtime()
         diff = pause - start
         remoteViews.setChronometer(
@@ -106,23 +105,44 @@ class ServiceWorker : Service() {
         return remoteViews
     }
 
-    var diff = 0L
+    private var start = 0L
+    private var pause = 0L
+    private var diff = 0L
+
+    private var isStart = false
+    private var isStop = false
+    private var isPause = false
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         when (intent.action) {
             ACTION_START -> {
-                Toast.makeText(this, "START", Toast.LENGTH_SHORT).show()
-                updateNotification(createNotification(startTimer(getRemoteViews())))
-
+                if (!isStart) {
+                    Toast.makeText(this, "START", Toast.LENGTH_SHORT).show()
+                    updateNotification(createNotification(startTimer(getRemoteViews())))
+                    isStart = true
+                    isStop = false
+                    isPause = false
+                }
             }
             ACTION_PAUSE -> {
-                Toast.makeText(this, "PAUSE", Toast.LENGTH_SHORT).show()
-                updateNotification(createNotification(pauseTimer(getRemoteViews())))
-            }
+                if (!isPause && isStart) {
+                    Toast.makeText(this, "PAUSE", Toast.LENGTH_SHORT).show()
+                    updateNotification(createNotification(pauseTimer(getRemoteViews())))
+                    isStart = false
+                    isStop = false
+                    isPause = true
+                }
 
+            }
             ACTION_STOP -> {
-                Toast.makeText(this, "STOP", Toast.LENGTH_SHORT).show()
-                updateNotification(createNotification(stopTimer(getRemoteViews())))
+                if (!isStop) {
+                    Toast.makeText(this, "STOP", Toast.LENGTH_SHORT).show()
+                    updateNotification(createNotification(stopTimer(getRemoteViews())))
+                    isStart = false
+                    isStop = true
+                    isPause = false
+                }
+
             }
             ACTION_START_SERVICE -> startForeground(
                 NOTIFICATION_ID, createNotification(
@@ -143,9 +163,7 @@ class ServiceWorker : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy() called");
-
-
+        Log.d(TAG, "onDestroy() called")
     }
 
     override fun onBind(p0: Intent?): IBinder? {
