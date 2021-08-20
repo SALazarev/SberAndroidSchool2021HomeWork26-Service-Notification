@@ -6,9 +6,6 @@ import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.Chronometer
 import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
@@ -29,14 +26,14 @@ class ServiceWorker : Service() {
         private const val ACTION_STOP = "ACTION_STOP"
     }
 
-    lateinit var timer: Chronometer
+  // lateinit var timer: Chronometer
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val layout: View = inflater.inflate(R.layout.notification_custom, null)
-        timer = layout.findViewById(R.id.chronometer)
+//        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+//        val layout: View = inflater.inflate(R.layout.notification_custom, null)
+//        timer = layout.findViewById(R.id.chronometer)
     }
 
     private fun createNotificationChannel() {
@@ -94,14 +91,19 @@ class ServiceWorker : Service() {
         return remoteViews
     }
 
+    var start = 0L
     fun startTimer(remoteViews: RemoteViews): RemoteViews {
-        remoteViews.setChronometer(R.id.chronometer, SystemClock.elapsedRealtime(), null, true)
+        start = SystemClock.elapsedRealtime()
+        remoteViews.setChronometer(R.id.chronometer, start, null, true)
         return remoteViews
     }
 
+    var pause = 0L
     fun pauseTimer(remoteViews: RemoteViews): RemoteViews {
+        pause = SystemClock.elapsedRealtime()
+        val test = pause - start
         remoteViews.setChronometer(
-            R.id.chronometer, timer.base,
+            R.id.chronometer, pause - test,
             null, false
         )
 
