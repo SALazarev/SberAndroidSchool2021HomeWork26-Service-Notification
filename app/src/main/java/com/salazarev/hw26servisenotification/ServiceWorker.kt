@@ -26,14 +26,9 @@ class ServiceWorker : Service() {
         private const val ACTION_STOP = "ACTION_STOP"
     }
 
-  // lateinit var timer: Chronometer
-
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-//        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-//        val layout: View = inflater.inflate(R.layout.notification_custom, null)
-//        timer = layout.findViewById(R.id.chronometer)
     }
 
     private fun createNotificationChannel() {
@@ -87,13 +82,14 @@ class ServiceWorker : Service() {
     }
 
     fun stopTimer(remoteViews: RemoteViews): RemoteViews {
+        diff = 0L
         remoteViews.setChronometer(R.id.chronometer, SystemClock.elapsedRealtime(), null, false)
         return remoteViews
     }
 
     var start = 0L
     fun startTimer(remoteViews: RemoteViews): RemoteViews {
-        start = SystemClock.elapsedRealtime()
+        start = SystemClock.elapsedRealtime() - diff
         remoteViews.setChronometer(R.id.chronometer, start, null, true)
         return remoteViews
     }
@@ -101,14 +97,16 @@ class ServiceWorker : Service() {
     var pause = 0L
     fun pauseTimer(remoteViews: RemoteViews): RemoteViews {
         pause = SystemClock.elapsedRealtime()
-        val test = pause - start
+        diff = pause - start
         remoteViews.setChronometer(
-            R.id.chronometer, pause - test,
+            R.id.chronometer, pause - diff,
             null, false
         )
 
         return remoteViews
     }
+
+    var diff = 0L
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         when (intent.action) {
